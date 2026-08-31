@@ -17,10 +17,7 @@ get(Key, Fallback, ContextKey) -> gen_server:call(?MODULE, {get, Key, Fallback, 
 % gen_server callbacks
 
 init(_Args) ->
-  ldclient:start_instance(os:getenv("LD_SDK_KEY"),  #{
-  http_options => #{
-      tls_options => ldclient_config:tls_basic_options()
-  }}),
+  start_ldclient(os:getenv("LD_SDK_KEY")),
   {ok, []}.
 
 handle_call({get, Key, Fallback, ContextKey}, _From, State) ->
@@ -38,3 +35,15 @@ terminate(_Reason, _State) ->
 
 code_change(_OldVsn, State, _Extra) ->
   {ok, State}.
+
+% internal functions
+
+start_ldclient(SdkKey) when SdkKey =:= false; SdkKey =:= "" ->
+  logger:warning("LD_SDK_KEY is not set; starting the LaunchDarkly client offline, "
+                 "so every evaluation returns its fallback value."),
+  ldclient:start_instance("", #{offline => true});
+start_ldclient(SdkKey) ->
+  ldclient:start_instance(SdkKey, #{
+    http_options => #{
+        tls_options => ldclient_config:tls_basic_options()
+    }}).
