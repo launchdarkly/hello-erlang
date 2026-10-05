@@ -17,11 +17,16 @@ get(Key, Fallback, ContextKey) -> gen_server:call(?MODULE, {get, Key, Fallback, 
 % gen_server callbacks
 
 init(_Args) ->
-  ldclient:start_instance(os:getenv("LD_SDK_KEY"),  #{
-  http_options => #{
-      tls_options => ldclient_config:tls_basic_options()
-  }}),
-  {ok, []}.
+  case os:getenv("LD_SDK_KEY") of
+    SdkKey when SdkKey =:= false; SdkKey =:= "" ->
+      {stop, "LD_SDK_KEY is not set. Set it to your LaunchDarkly server-side SDK key and try again."};
+    SdkKey ->
+      ldclient:start_instance(SdkKey, #{
+        http_options => #{
+            tls_options => ldclient_config:tls_basic_options()
+        }}),
+      {ok, []}
+  end.
 
 handle_call({get, Key, Fallback, ContextKey}, _From, State) ->
   Flag = ldclient:variation(Key, ldclient_context:new(ContextKey), Fallback),
